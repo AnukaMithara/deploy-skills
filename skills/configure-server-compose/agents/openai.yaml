@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configure Server Compose"
+  short_description: "Create secure single-server Compose setups"
+  default_prompt: "Use $configure-server-compose to prepare production Compose configuration for this server deployment."

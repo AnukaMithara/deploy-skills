@@ -1,0 +1,52 @@
+name: deploy-skills-fastapi
+
+services:
+  app:
+    image: ${APP_IMAGE:-deploy-skills-fastapi}:${APP_VERSION:-development}
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - edge
+      - backend
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  migrate:
+    image: ${APP_IMAGE:-deploy-skills-fastapi}:${APP_VERSION:-development}
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+    profiles:
+      - tools
+
+  db:
+    image: postgres:17-alpine
+    expose:
+      - "5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+networks:
+  edge:
+  backend:
+    internal: true
+
+volumes:
+  postgres_data:

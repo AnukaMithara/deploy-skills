@@ -1,0 +1,36 @@
+services:
+  app:
+    image: deploy-skills-fastapi-redis:development
+    build:
+      context: .
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://fixture:fixture-local-only-password@db:5432/fixture
+      REDIS_URL: redis://:fixture-local-only-cache-password@redis:6379/0
+    ports:
+      - "127.0.0.1:${APP_PORT:-18001}:8000"
+    volumes:
+      - ./app:/app/app:ro
+
+  migrate:
+    image: deploy-skills-fastapi-redis:development
+    environment:
+      DATABASE_URL: postgresql+psycopg://fixture:fixture-local-only-password@db:5432/fixture
+
+  db:
+    environment:
+      POSTGRES_DB: fixture
+      POSTGRES_USER: fixture
+      POSTGRES_PASSWORD: fixture-local-only-password
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-15433}:5432"
+
+  redis:
+    environment:
+      REDIS_PASSWORD: fixture-local-only-cache-password
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-16379}:6379"
+
+networks:
+  backend:
+    internal: false

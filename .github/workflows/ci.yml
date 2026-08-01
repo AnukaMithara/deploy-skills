@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  fast-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Validate skills
+        run: ./scripts/validate-all-skills.sh
+      - name: Run unit tests
+        env:
+          APP_IMAGE: deploy-skills-fastapi
+          APP_VERSION: fixture-test
+          POSTGRES_DB: fixture
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: fixture-local-only-password
+          DATABASE_URL: postgresql+psycopg://fixture:fixture-local-only-password@db:5432/fixture
+          REDIS_PASSWORD: fixture-local-only-cache-password
+          REDIS_URL: redis://:fixture-local-only-cache-password@redis:6379/0
+        run: python3 -m unittest discover -s tests -v
+      - name: Validate evaluation JSON
+        run: python3 -m json.tool evals/prompts.json >/dev/null && python3 -m json.tool evals/expected-invariants.json >/dev/null
+
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: fast-checks
+    strategy:
+      fail-fast: false
+      matrix:
+        fixture:
+          - fastapi-postgres
+          - fastapi-postgres-redis
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Run production fixture
+        run: ./scripts/run-fixture.sh fixtures/${{ matrix.fixture }}
+
+  local-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: fast-checks
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Run local Compose fixture
+        run: ./scripts/run-local-fixture.sh fixtures/fastapi-postgres-redis

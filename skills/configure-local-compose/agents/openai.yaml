@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configure Local Compose"
+  short_description: "Create portable local Compose workflows"
+  default_prompt: "Use $configure-local-compose to create a local Docker Compose development environment."

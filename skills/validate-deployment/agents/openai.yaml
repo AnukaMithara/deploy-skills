@@ -1,0 +1,4 @@
+interface:
+  display_name: "Validate Deployment"
+  short_description: "Run deterministic deployment checks"
+  default_prompt: "Use $validate-deployment to verify these deployment artifacts and report exact evidence."

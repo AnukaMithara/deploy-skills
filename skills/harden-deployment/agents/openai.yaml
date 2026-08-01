@@ -1,0 +1,4 @@
+interface:
+  display_name: "Harden Deployment"
+  short_description: "Audit container deployment security"
+  default_prompt: "Use $harden-deployment to audit these deployment files and propose minimal security corrections."

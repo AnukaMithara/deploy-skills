@@ -1,0 +1,4 @@
+interface:
+  display_name: "Analyze Deployment"
+  short_description: "Inspect repositories for deployment needs"
+  default_prompt: "Use $analyze-deployment to inspect this repository and produce an evidence-based deployment plan."

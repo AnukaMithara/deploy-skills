@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "fastapi-postgres-production": {
+    "required": [
+      "analysis precedes generation",
+      "application image has a non-root runtime user",
+      "application image uses an explicit version",
+      "PostgreSQL has no host-published port",
+      "PostgreSQL data uses persistent storage",
+      "migrations are an explicit one-shot operation",
+      "application health checks the database",
+      "Nginx is the public entry point",
+      "real secrets are absent",
+      "backup, restore, and rollback are documented",
+      "production-changing actions require explicit approval"
+    ],
+    "forbidden": [
+      "privileged mode",
+      "host networking",
+      "Docker socket mount",
+      "development source bind mount",
+      "latest application tag",
+      "automatic destructive cleanup",
+      "automatic production migration"
+    ]
+  },
+  "fastapi-postgres-local": {
+    "required": [
+      "application image is built locally",
+      "application source is bind mounted",
+      "framework reload command is enabled",
+      "application has a direct loopback host port",
+      "PostgreSQL data uses a named volume",
+      "development dependency ports bind only to loopback",
+      "migrations remain explicit"
+    ],
+    "forbidden": [
+      "production reverse proxy",
+      "production TLS configuration",
+      "public dependency port",
+      "automatic named-volume deletion"
+    ]
+  },
+  "fastapi-postgres-redis-production": {
+    "required": [
+      "application health proves PostgreSQL and Redis reachability",
+      "PostgreSQL and Redis have no host-published production ports",
+      "Redis is documented as disposable cache state",
+      "Redis persistence is disabled",
+      "PostgreSQL remains authoritative and persistent"
+    ],
+    "forbidden": [
+      "Redis named production volume",
+      "Redis backup requirement",
+      "authoritative application data in Redis"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+name: Deployment skill bug
+description: Report incorrect, unsafe, or incomplete deployment behavior
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed behavior
+      description: Describe what the skill generated or advised without including secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Stack and validation evidence
+      description: Include versions, sanitized configuration, and commands that were run.
