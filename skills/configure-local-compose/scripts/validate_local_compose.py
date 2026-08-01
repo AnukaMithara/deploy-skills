@@ -72,6 +72,12 @@ def command_text(service: dict[str, Any]) -> str:
     return str(command)
 
 
+def enables_development_reload(service: dict[str, Any]) -> bool:
+    command = command_text(service).lower()
+    markers = ("reload", "next dev", "npm run dev", "pnpm run dev", "yarn dev", "bun run dev", "vite")
+    return any(marker in command for marker in markers)
+
+
 def uses_host_reachable_network(service: dict[str, Any], networks: dict[str, Any]) -> bool:
     attached = service.get("networks")
     if not attached:
@@ -92,7 +98,7 @@ def validate(model: dict[str, Any]) -> list[str]:
         errors.append(f"{app_name}: local application service has no build configuration")
     if not bind_mounts(app):
         errors.append(f"{app_name}: local application service has no source bind mount")
-    if "reload" not in command_text(app).lower():
+    if not enables_development_reload(app):
         errors.append(f"{app_name}: local application command does not enable reload")
     if not app.get("ports"):
         errors.append(f"{app_name}: local application has no direct host port")

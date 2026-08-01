@@ -1,0 +1,14 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+.next
+node_modules
+npm-debug.log*
+compose*.yaml
+DEPLOYMENT.md
+nginx
+*.pem
+*.key
+*.crt

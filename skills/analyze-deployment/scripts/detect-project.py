@@ -200,6 +200,7 @@ def collect_environment(files: list[Path], root: Path) -> list[dict[str, Any]]:
     results: dict[tuple[str, str], dict[str, Any]] = {}
     env_call = re.compile(r"(?:getenv|environ\.get)\(\s*['\"]([A-Z][A-Z0-9_]*)['\"]")
     env_index = re.compile(r"environ\[\s*['\"]([A-Z][A-Z0-9_]*)['\"]\s*\]")
+    process_env = re.compile(r"process\.env\.([A-Z][A-Z0-9_]*)")
     for path in files:
         if path.name in {".env.example", "example.env"} or path.name.endswith(".env.example"):
             for line in safe_text(path).splitlines():
@@ -210,7 +211,7 @@ def collect_environment(files: list[Path], root: Path) -> list[dict[str, Any]]:
                     results[key] = {"name": name, "source": key[1], "sensitive": any(word in name for word in SENSITIVE_WORDS)}
         elif path.suffix in SOURCE_SUFFIXES:
             text = safe_text(path, limit=300_000)
-            for name in set(env_call.findall(text) + env_index.findall(text)):
+            for name in set(env_call.findall(text) + env_index.findall(text) + process_env.findall(text)):
                 key = (name, relative(path, root))
                 results[key] = {"name": name, "source": key[1], "sensitive": any(word in name for word in SENSITIVE_WORDS)}
     return sorted(results.values(), key=lambda item: (item["name"], item["source"]))
@@ -233,6 +234,28 @@ def enrich_python_projects(projects: list[dict[str, Any]], files: list[Path], ro
                 item = {"port": int(port), "source": relative(path, root)}
                 if item not in project["ports"]:
                     project["ports"].append(item)
+
+
+def enrich_node_projects(projects: list[dict[str, Any]], files: list[Path], root: Path) -> None:
+    for project in projects:
+        if "nextjs" not in project["frameworks"]:
+            continue
+        directory = root if project["path"] == "." else root / project["path"]
+        for path in files:
+            if path.suffix not in {".js", ".jsx", ".ts", ".tsx"} or directory not in (path.parent, *path.parents):
+                continue
+            try:
+                parts = path.relative_to(directory).parts
+            except ValueError:
+                continue
+            if path.stem != "route" or "app" not in parts or "health" not in parts:
+                continue
+            app_index = max(index for index, part in enumerate(parts) if part == "app")
+            route_parts = [part for part in parts[app_index + 1 : -1] if not (part.startswith("(") and part.endswith(")"))]
+            endpoint = "/" + "/".join(route_parts)
+            item = {"path": endpoint, "source": relative(path, root)}
+            if item not in project["health_endpoints"]:
+                project["health_endpoints"].append(item)
 
 
 def detect_dependencies(files: list[Path], root: Path) -> list[dict[str, str]]:
@@ -283,6 +306,7 @@ def inspect(root: Path) -> dict[str, Any]:
             warnings.extend(project_warnings)
 
     enrich_python_projects(projects, files, root)
+    enrich_node_projects(projects, files, root)
     if not projects:
         warnings.append("no supported project manifest detected")
 
