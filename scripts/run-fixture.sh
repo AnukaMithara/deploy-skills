@@ -10,13 +10,23 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 2
 fi
 
-if [[ "$fixture_name" == *redis* ]]; then
-  export APP_IMAGE="deploy-skills-fastapi-redis"
-  export HTTP_PORT="${HTTP_PORT:-18081}"
-else
-  export APP_IMAGE="deploy-skills-fastapi"
-  export HTTP_PORT="${HTTP_PORT:-18080}"
-fi
+case "$fixture_name" in
+  *nextjs*)
+    export APP_IMAGE="deploy-skills-nextjs"
+    export HTTP_PORT="${HTTP_PORT:-18082}"
+    health_path="/api/health"
+    ;;
+  *redis*)
+    export APP_IMAGE="deploy-skills-fastapi-redis"
+    export HTTP_PORT="${HTTP_PORT:-18081}"
+    health_path="/health"
+    ;;
+  *)
+    export APP_IMAGE="deploy-skills-fastapi"
+    export HTTP_PORT="${HTTP_PORT:-18080}"
+    health_path="/health"
+    ;;
+esac
 export APP_VERSION="fixture-test"
 export POSTGRES_DB="fixture"
 export POSTGRES_USER="fixture"
@@ -42,17 +52,24 @@ docker build --tag "$APP_IMAGE:$APP_VERSION" "$fixture"
 "${compose[@]}" config --quiet
 python3 "$repository_root/skills/validate-deployment/scripts/validate_compose.py" --root "$fixture"
 services="$("${compose[@]}" --profile '*' config --services)"
-dependencies=(db)
+dependencies=()
+if grep -qx db <<<"$services"; then
+  dependencies+=(db)
+fi
 if grep -qx redis <<<"$services"; then
   dependencies+=(redis)
 fi
-"${compose[@]}" up -d "${dependencies[@]}"
-"${compose[@]}" --profile tools run --rm migrate
+if [[ "${#dependencies[@]}" -gt 0 ]]; then
+  "${compose[@]}" up -d "${dependencies[@]}"
+fi
+if grep -qx migrate <<<"$services"; then
+  "${compose[@]}" --profile tools run --rm migrate
+fi
 "${compose[@]}" up -d app proxy
 
 healthy=0
 for _attempt in $(seq 1 45); do
-  if curl --fail --silent "http://127.0.0.1:$HTTP_PORT/health" > "$health_file"; then
+  if curl --fail --silent "http://127.0.0.1:$HTTP_PORT$health_path" > "$health_file"; then
     healthy=1
     break
   fi
@@ -63,7 +80,9 @@ if [[ "$healthy" -ne 1 ]]; then
   exit 1
 fi
 
-grep -q '"database":"reachable"' "$health_file"
+if grep -qx db <<<"$services"; then
+  grep -q '"database":"reachable"' "$health_file"
+fi
 if grep -qx redis <<<"$services"; then
   grep -q '"redis":"reachable"' "$health_file"
 fi
@@ -72,25 +91,19 @@ if [[ "$runtime_uid" == "0" ]]; then
   echo "Application container runs as root." >&2
   exit 1
 fi
-db_container_id="$("${compose[@]}" ps -q db)"
-if docker inspect --format '{{json .NetworkSettings.Ports}}' "$db_container_id" \
-  | python3 -c 'import json, sys; ports = json.load(sys.stdin); raise SystemExit(any(value for value in ports.values()))'; then
-  :
-else
-  echo "PostgreSQL unexpectedly publishes a host port." >&2
-  exit 1
-fi
-if grep -qx redis <<<"$services"; then
-  redis_container_id="$("${compose[@]}" ps -q redis)"
-  if docker inspect --format '{{json .NetworkSettings.Ports}}' "$redis_container_id" \
-    | python3 -c 'import json, sys; ports = json.load(sys.stdin); raise SystemExit(any(value for value in ports.values()))'; then
-    :
-  else
-    echo "Redis unexpectedly publishes a host port." >&2
-    exit 1
-  fi
+if [[ "${#dependencies[@]}" -gt 0 ]]; then
+  for dependency in "${dependencies[@]}"; do
+    dependency_container_id="$("${compose[@]}" ps -q "$dependency")"
+    if docker inspect --format '{{json .NetworkSettings.Ports}}' "$dependency_container_id" \
+      | python3 -c 'import json, sys; ports = json.load(sys.stdin); raise SystemExit(any(value for value in ports.values()))'; then
+      :
+    else
+      echo "$dependency unexpectedly publishes a host port." >&2
+      exit 1
+    fi
+  done
 fi
 "${compose[@]}" exec -T proxy nginx -t
 
 completed=1
-echo "Fixture passed: dependency health, migration, non-root runtime, private stateful ports, and Nginx syntax."
+echo "Fixture passed: application health, optional dependency checks, non-root runtime, private stateful ports, and Nginx syntax."

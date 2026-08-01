@@ -54,5 +54,37 @@
       "Redis backup requirement",
       "authoritative application data in Redis"
     ]
+  },
+  "nextjs-production": {
+    "required": [
+      "Next.js standalone output is enabled",
+      "the build uses the npm lockfile",
+      "the production runtime runs as non-root",
+      "the application image contains no development source bind mount",
+      "the runtime cache path is writable without making the image filesystem writable",
+      "Nginx is the only public entry point",
+      "the application health route is checked through the proxy",
+      "rollback uses the previous immutable image version"
+    ],
+    "forbidden": [
+      "next dev in production",
+      "mutable latest application tag",
+      "public runtime secrets embedded as NEXT_PUBLIC values",
+      "automatic remote deployment"
+    ]
+  },
+  "nextjs-local": {
+    "required": [
+      "the development Docker target is built locally",
+      "application source is bind mounted",
+      "next dev provides hot reload",
+      "the application port binds only to loopback",
+      "the production reverse proxy is absent"
+    ],
+    "forbidden": [
+      "production standalone server command",
+      "public development port on all interfaces",
+      "production TLS configuration"
+    ]
   }
 }

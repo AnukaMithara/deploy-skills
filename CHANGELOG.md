@@ -9,3 +9,4 @@ All notable changes to this project will be documented here. The project follows
 - Initial FastAPI and PostgreSQL production deployment vertical slice.
 - Local Compose skill with bind-mounted FastAPI hot reload.
 - Independent FastAPI, PostgreSQL, and ephemeral Redis fixture.
+- Next.js standalone production and hot-reload development fixture with patched dependency overrides.

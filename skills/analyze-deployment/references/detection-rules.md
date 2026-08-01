@@ -9,7 +9,7 @@ Use deterministic evidence first and inspect ambiguous candidates manually.
 | Python | `pyproject.toml`, `requirements*.txt`, `poetry.lock`, `uv.lock`, `Pipfile.lock` |
 | FastAPI | dependency declaration plus imports or an ASGI entry point |
 | Node.js | `package.json` plus npm, pnpm, Yarn, or Bun lockfile |
-| Next.js | `next` dependency and build/start scripts |
+| Next.js | `next` dependency, build/start scripts, App/Pages Router structure, and route handlers |
 | Spring Boot | Maven or Gradle build declaring Spring Boot |
 | PostgreSQL | driver dependency, database URL name, Compose image, or migration configuration |
 | Redis | client dependency, Redis URL name, or Compose image |

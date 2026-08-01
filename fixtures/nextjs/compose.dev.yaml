@@ -1,0 +1,15 @@
+services:
+  app:
+    image: deploy-skills-nextjs:development
+    build:
+      context: .
+      target: development
+    command: ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000"]
+    environment:
+      NODE_ENV: development
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "127.0.0.1:${APP_PORT:-13000}:3000"
+    volumes:
+      - ./app:/app/app:ro
+      - ./next.config.mjs:/app/next.config.mjs:ro

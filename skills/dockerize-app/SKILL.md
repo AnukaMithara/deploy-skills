@@ -12,7 +12,7 @@ Create an image that matches the analyzed application instead of a generic templ
 1. Require an `analyze-deployment` result or perform that analysis first.
 2. Inspect every existing Dockerfile, ignore file, lockfile, and startup declaration.
 3. Read [references/dockerfile-rules.md](references/dockerfile-rules.md).
-4. For FastAPI or Python, also read [references/python-fastapi.md](references/python-fastapi.md).
+4. Read the matching stack reference: [references/python-fastapi.md](references/python-fastapi.md) for Python/FastAPI or [references/nextjs.md](references/nextjs.md) for Next.js.
 5. Propose the exact files and behavior to change before editing existing configuration.
 6. Generate a matching `.dockerignore`; use [assets/dockerignore.base](assets/dockerignore.base) only as a baseline and preserve required build inputs.
 7. Run `python3 scripts/inspect-dockerfile.py --dockerfile <path>` and build the image when Docker is available.

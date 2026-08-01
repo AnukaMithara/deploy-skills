@@ -37,7 +37,8 @@
       "positive": [
         "Create a production Dockerfile for this FastAPI service.",
         "Fix the existing Dockerfile without changing the package manager.",
-        "Make this image run as non-root."
+        "Make this image run as non-root.",
+        "Create a minimal standalone production image for this Next.js application."
       ],
       "negative": [
         "Explain Docker layers.",
@@ -53,7 +54,8 @@
       "positive": [
         "Create a local Docker Compose environment with FastAPI hot reload.",
         "Add compose.dev.yaml with PostgreSQL and Redis for development.",
-        "Make the existing containers convenient for local development without changing production."
+        "Make the existing containers convenient for local development without changing production.",
+        "Run this Next.js application in Compose with next dev and source hot reload."
       ],
       "negative": [
         "Create production Compose configuration for an Ubuntu VPS.",
@@ -69,7 +71,8 @@
       "positive": [
         "Create production Compose configuration for one Ubuntu server.",
         "Keep PostgreSQL private and persistent in production Compose.",
-        "Add explicit migration and rollback steps to this Compose deployment."
+        "Add explicit migration and rollback steps to this Compose deployment.",
+        "Create production Compose for a standalone Next.js image behind Nginx."
       ],
       "negative": [
         "Teach me YAML syntax.",

@@ -2,7 +2,7 @@
 
 Production-ready deployment playbooks for AI coding agents.
 
-Deploy Skills helps Codex, Claude Code, GitHub Copilot, Cursor, and other Agent Skills-compatible agents inspect an application before creating secure, validated deployment configuration. The current vertical slices cover local Docker development and single-server production for FastAPI with PostgreSQL and optional Redis.
+Deploy Skills helps Codex, Claude Code, GitHub Copilot, Cursor, and other Agent Skills-compatible agents inspect an application before creating secure, validated deployment configuration. The current vertical slices cover local Docker development and single-server production for FastAPI with PostgreSQL and optional Redis, plus Next.js standalone deployment.
 
 ## What the skills do
 
@@ -59,6 +59,7 @@ Fast checks:
 gh skill publish --dry-run
 python3 -m unittest discover -s tests -v
 ./scripts/run-security-checks.sh fixtures/fastapi-postgres
+./scripts/run-security-checks.sh fixtures/nextjs
 python3 skills/configure-local-compose/scripts/validate_local_compose.py \
   --root fixtures/fastapi-postgres-redis
 APP_IMAGE=deploy-skills-fastapi APP_VERSION=fixture-test \
@@ -75,13 +76,15 @@ Live fixture validation:
 ./scripts/run-fixture.sh fixtures/fastapi-postgres
 ./scripts/run-fixture.sh fixtures/fastapi-postgres-redis
 ./scripts/run-local-fixture.sh fixtures/fastapi-postgres-redis
+./scripts/run-fixture.sh fixtures/nextjs
+./scripts/run-local-fixture.sh fixtures/nextjs
 ```
 
 The live test builds images and starts local containers. It does not connect to a remote server or delete named volumes.
 
 ## Current scope
 
-The repository now proves FastAPI with PostgreSQL, optional ephemeral Redis caching, local Compose hot reload, production Compose, Ubuntu VPS guidance, Nginx, explicit migrations, dependency health checks, backup guidance, and rollback guidance. Next.js, Node.js, Spring Boot, managed platforms, Kubernetes, Terraform, and Ansible remain planned.
+The repository now proves FastAPI with PostgreSQL, optional ephemeral Redis caching, and Next.js standalone output across local hot-reload and single-server production Compose. It also covers Ubuntu VPS guidance, Nginx, explicit migrations, dependency health checks, backup guidance, and rollback guidance. Node.js APIs, Spring Boot, managed platforms, Kubernetes, Terraform, and Ansible remain planned.
 
 ## Contributing and security
 

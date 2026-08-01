@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DETECTOR = ROOT / "skills/analyze-deployment/scripts/detect-project.py"
 FIXTURE = ROOT / "fixtures/fastapi-postgres"
 REDIS_FIXTURE = ROOT / "fixtures/fastapi-postgres-redis"
+NEXTJS_FIXTURE = ROOT / "fixtures/nextjs"
 
 
 class DetectProjectTests(unittest.TestCase):
@@ -52,6 +53,17 @@ class DetectProjectTests(unittest.TestCase):
         self.assertIn("redis", {item["type"] for item in report["dependencies"]})
         self.assertIn("REDIS_URL", {item["name"] for item in report["environment"]})
         self.assertNotIn("redis://redis:6379/0", process.stdout)
+
+    def test_nextjs_fixture_detects_framework_commands_and_health(self) -> None:
+        process = self.run_detector(NEXTJS_FIXTURE)
+        self.assertEqual(process.returncode, 0, process.stderr)
+        report = json.loads(process.stdout)
+        project = report["projects"][0]
+        self.assertIn("nextjs", project["frameworks"])
+        self.assertEqual(project["package_managers"], ["npm"])
+        self.assertIn("npm run build", {item["command"] for item in project["commands"]["build"]})
+        self.assertIn("npm run start", {item["command"] for item in project["commands"]["start"]})
+        self.assertIn("/api/health", {item["path"] for item in project["health_endpoints"]})
 
     def test_missing_root_uses_contract_exit_code(self) -> None:
         process = self.run_detector(ROOT / "does-not-exist")

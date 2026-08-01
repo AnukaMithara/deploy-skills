@@ -8,6 +8,10 @@ __pycache__/
 !.env.example
 .coverage
 htmlcov/
+node_modules/
+.next/
+*.tsbuildinfo
+npm-debug.log*
 *.log
 *.pem
 *.key
