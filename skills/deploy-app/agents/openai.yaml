@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deploy App"
+  short_description: "Coordinate secure application deployments"
+  default_prompt: "Use $deploy-app to prepare this repository for a secure, validated production deployment."

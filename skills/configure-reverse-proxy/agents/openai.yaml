@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configure Reverse Proxy"
+  short_description: "Configure Nginx routing and TLS guidance"
+  default_prompt: "Use $configure-reverse-proxy to configure and validate Nginx for this application."

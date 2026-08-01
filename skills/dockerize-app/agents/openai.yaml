@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dockerize App"
+  short_description: "Build production-ready application images"
+  default_prompt: "Use $dockerize-app to create or improve the production Dockerfile for this application."
