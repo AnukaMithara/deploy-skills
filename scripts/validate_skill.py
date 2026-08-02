@@ -45,8 +45,10 @@ def validate(skill: Path) -> list[str]:
         errors.append(f"name must match directory: {expected}")
     if not NAME.fullmatch(metadata.get("name", "")):
         errors.append("name must use lowercase letters, digits, and single hyphens")
-    if set(metadata) != {"name", "description"}:
-        errors.append("frontmatter must contain only name and description")
+    if not {"name", "description"}.issubset(metadata) or set(metadata) - {"name", "description", "license"}:
+        errors.append("frontmatter must contain name and description, with optional license")
+    if metadata.get("license") not in {None, "Apache-2.0"}:
+        errors.append("license must be Apache-2.0 when declared")
     description = metadata.get("description", "")
     if not description or len(description) > 1024:
         errors.append("description must contain 1 to 1024 characters")

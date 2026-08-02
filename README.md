@@ -2,7 +2,7 @@
 
 Production-ready deployment playbooks for AI coding agents.
 
-Deploy Skills helps Codex, Claude Code, GitHub Copilot, Cursor, and other Agent Skills-compatible agents inspect an application before creating secure, validated deployment configuration. The current vertical slices cover local Docker development and single-server production for FastAPI with PostgreSQL and optional Redis, plus Next.js standalone deployment.
+Deploy Skills helps Codex, Claude Code, GitHub Copilot, Cursor, and other Agent Skills-compatible agents inspect an application before creating secure, validated deployment configuration. The current vertical slices cover local Docker development and single-server production for FastAPI, Node.js APIs, and Spring Boot with PostgreSQL, optional Redis caching for FastAPI, and Next.js standalone deployment.
 
 ## What the skills do
 
@@ -16,6 +16,7 @@ Inspect -> Plan -> Generate -> Harden -> Validate -> Document
 - Add portable local Compose overrides with source bind mounts and hot reload.
 - Keep stateful services private and persistent.
 - Configure Nginx and provide approval-gated TLS guidance.
+- Generate pinned GitHub Actions for GHCR publishing and approval-gated deploy or rollback operations.
 - Check common deployment security failures deterministically.
 - Build, start, health-check, and report what was actually verified.
 
@@ -29,6 +30,7 @@ Inspect -> Plan -> Generate -> Harden -> Validate -> Document
 | `configure-local-compose` | Create local Compose environments with hot reload. |
 | `configure-server-compose` | Create production Docker Compose configuration for one server. |
 | `configure-reverse-proxy` | Configure Nginx and document TLS bootstrap. |
+| `configure-ci-cd` | Generate secure GitHub Actions for image publishing and approval-gated production operations. |
 | `harden-deployment` | Audit deployment configuration for unsafe defaults. |
 | `validate-deployment` | Run deterministic static and live deployment checks. |
 
@@ -58,6 +60,9 @@ Fast checks:
 ./scripts/validate-all-skills.sh
 gh skill publish --dry-run
 python3 -m unittest discover -s tests -v
+python3 scripts/run-evals.py
+python3 skills/configure-ci-cd/scripts/validate_workflow.py \
+  --workflow skills/configure-ci-cd/assets/deploy.yml
 ./scripts/run-security-checks.sh fixtures/fastapi-postgres
 ./scripts/run-security-checks.sh fixtures/nextjs
 python3 skills/configure-local-compose/scripts/validate_local_compose.py \
@@ -78,13 +83,17 @@ Live fixture validation:
 ./scripts/run-local-fixture.sh fixtures/fastapi-postgres-redis
 ./scripts/run-fixture.sh fixtures/nextjs
 ./scripts/run-local-fixture.sh fixtures/nextjs
+./scripts/run-fixture.sh fixtures/node-api-postgres
+./scripts/run-local-fixture.sh fixtures/node-api-postgres
+./scripts/run-fixture.sh fixtures/spring-boot-postgres
+./scripts/run-local-fixture.sh fixtures/spring-boot-postgres
 ```
 
 The live test builds images and starts local containers. It does not connect to a remote server or delete named volumes.
 
 ## Current scope
 
-The repository now proves FastAPI with PostgreSQL, optional ephemeral Redis caching, and Next.js standalone output across local hot-reload and single-server production Compose. It also covers Ubuntu VPS guidance, Nginx, explicit migrations, dependency health checks, backup guidance, and rollback guidance. Node.js APIs, Spring Boot, managed platforms, Kubernetes, Terraform, and Ansible remain planned.
+The repository now proves FastAPI, Node.js API, Spring Boot, PostgreSQL, optional ephemeral Redis caching, and Next.js standalone output across local hot-reload and single-server production Compose. It also covers Ubuntu VPS guidance, Nginx, explicit migrations, dependency health checks, backup and rollback guidance, GHCR publishing, and approval-gated GitHub Actions deployment. Managed platforms, Kubernetes, Terraform, and Ansible remain planned.
 
 ## Contributing and security
 

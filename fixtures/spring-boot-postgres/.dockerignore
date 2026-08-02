@@ -1,0 +1,12 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+target
+.idea
+*.iml
+Dockerfile*
+compose*.yaml
+DEPLOYMENT.md
+nginx

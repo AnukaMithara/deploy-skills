@@ -1,0 +1,35 @@
+services:
+  app:
+    image: deploy-skills-spring-boot:development
+    build:
+      context: .
+      target: development
+    command: ["mvn", "-B", "-ntp", "spring-boot:run"]
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/fixture
+      POSTGRES_USER: fixture
+      POSTGRES_PASSWORD: fixture-local-only-password
+    ports:
+      - "127.0.0.1:${APP_PORT:-18004}:8080"
+    volumes:
+      - ./src:/app/src:ro
+
+  migrate:
+    image: deploy-skills-spring-boot:development
+    command: ["mvn", "-B", "-ntp", "spring-boot:run", "-Dspring-boot.run.arguments=--spring.main.web-application-type=none --spring.flyway.enabled=true"]
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/fixture
+      POSTGRES_USER: fixture
+      POSTGRES_PASSWORD: fixture-local-only-password
+
+  db:
+    environment:
+      POSTGRES_DB: fixture
+      POSTGRES_USER: fixture
+      POSTGRES_PASSWORD: fixture-local-only-password
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-15435}:5432"
+
+networks:
+  backend:
+    internal: false

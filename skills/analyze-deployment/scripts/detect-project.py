@@ -173,14 +173,20 @@ def classify_project(directory: Path, root: Path, file_names: set[str]) -> tuple
             frameworks.add("spring-boot")
         if "pom.xml" in build_files:
             package_managers.add("maven")
-            commands["build"].append({"command": "./mvnw package", "source": "pom.xml"})
+            maven = "./mvnw" if (directory / "mvnw").is_file() else "mvn"
+            commands["build"].append({"command": f"{maven} package", "source": "pom.xml"})
         else:
             package_managers.add("gradle")
-            commands["build"].append({"command": "./gradlew build", "source": "Gradle build"})
+            gradle = "./gradlew" if (directory / "gradlew").is_file() else "gradle"
+            commands["build"].append({"command": f"{gradle} build", "source": "Gradle build"})
+        if "spring-boot" in frameworks:
+            commands["start"].append({"command": "java -jar <application.jar>", "source": "Spring Boot build"})
+        if "flyway" in build_text:
+            commands["migration"].append({"command": "docker compose --profile tools run --rm migrate", "source": "Flyway dependency"})
 
     if len(package_managers & {"npm", "pnpm", "yarn", "bun"}) > 1:
         warnings.append(f"conflicting Node.js lockfiles in {relative(directory, root)}")
-    if languages and not lockfiles and "pip" not in package_managers:
+    if "javascript" in languages and not lockfiles:
         warnings.append(f"no recognized lockfile in {relative(directory, root)}")
 
     return {
@@ -201,6 +207,7 @@ def collect_environment(files: list[Path], root: Path) -> list[dict[str, Any]]:
     env_call = re.compile(r"(?:getenv|environ\.get)\(\s*['\"]([A-Z][A-Z0-9_]*)['\"]")
     env_index = re.compile(r"environ\[\s*['\"]([A-Z][A-Z0-9_]*)['\"]\s*\]")
     process_env = re.compile(r"process\.env\.([A-Z][A-Z0-9_]*)")
+    system_env = re.compile(r"System\.getenv\(\s*['\"]([A-Z][A-Z0-9_]*)['\"]\s*\)")
     for path in files:
         if path.name in {".env.example", "example.env"} or path.name.endswith(".env.example"):
             for line in safe_text(path).splitlines():
@@ -211,7 +218,7 @@ def collect_environment(files: list[Path], root: Path) -> list[dict[str, Any]]:
                     results[key] = {"name": name, "source": key[1], "sensitive": any(word in name for word in SENSITIVE_WORDS)}
         elif path.suffix in SOURCE_SUFFIXES:
             text = safe_text(path, limit=300_000)
-            for name in set(env_call.findall(text) + env_index.findall(text) + process_env.findall(text)):
+            for name in set(env_call.findall(text) + env_index.findall(text) + process_env.findall(text) + system_env.findall(text)):
                 key = (name, relative(path, root))
                 results[key] = {"name": name, "source": key[1], "sensitive": any(word in name for word in SENSITIVE_WORDS)}
     return sorted(results.values(), key=lambda item: (item["name"], item["source"]))
@@ -238,7 +245,7 @@ def enrich_python_projects(projects: list[dict[str, Any]], files: list[Path], ro
 
 def enrich_node_projects(projects: list[dict[str, Any]], files: list[Path], root: Path) -> None:
     for project in projects:
-        if "nextjs" not in project["frameworks"]:
+        if "javascript" not in project["languages"]:
             continue
         directory = root if project["path"] == "." else root / project["path"]
         for path in files:
@@ -248,14 +255,39 @@ def enrich_node_projects(projects: list[dict[str, Any]], files: list[Path], root
                 parts = path.relative_to(directory).parts
             except ValueError:
                 continue
-            if path.stem != "route" or "app" not in parts or "health" not in parts:
+            if "nextjs" in project["frameworks"] and path.stem == "route" and "app" in parts and "health" in parts:
+                app_index = max(index for index, part in enumerate(parts) if part == "app")
+                route_parts = [part for part in parts[app_index + 1 : -1] if not (part.startswith("(") and part.endswith(")"))]
+                endpoints = ["/" + "/".join(route_parts)]
+            else:
+                text = safe_text(path, limit=300_000)
+                endpoints = re.findall(r"(?:request|req)\.url\s*={2,3}\s*['\"]([^'\"]*health[^'\"]*)['\"]", text, re.IGNORECASE)
+            for endpoint in sorted(set(endpoints)):
+                item = {"path": endpoint, "source": relative(path, root)}
+                if item not in project["health_endpoints"]:
+                    project["health_endpoints"].append(item)
+
+
+def enrich_java_projects(projects: list[dict[str, Any]], files: list[Path], root: Path) -> None:
+    for project in projects:
+        if "java" not in project["languages"]:
+            continue
+        directory = root if project["path"] == "." else root / project["path"]
+        for path in files:
+            if path.suffix != ".java" or directory not in (path.parent, *path.parents):
                 continue
-            app_index = max(index for index, part in enumerate(parts) if part == "app")
-            route_parts = [part for part in parts[app_index + 1 : -1] if not (part.startswith("(") and part.endswith(")"))]
-            endpoint = "/" + "/".join(route_parts)
-            item = {"path": endpoint, "source": relative(path, root)}
-            if item not in project["health_endpoints"]:
-                project["health_endpoints"].append(item)
+            text = safe_text(path, limit=300_000)
+            endpoints = re.findall(r"@(?:GetMapping|RequestMapping)\(\s*['\"]([^'\"]*health[^'\"]*)['\"]", text, re.IGNORECASE)
+            for endpoint in sorted(set(endpoints)):
+                item = {"path": endpoint, "source": relative(path, root)}
+                if item not in project["health_endpoints"]:
+                    project["health_endpoints"].append(item)
+        properties = directory / "src" / "main" / "resources" / "application.properties"
+        if properties.is_file():
+            for port in re.findall(r"^server\.port\s*=\s*\$\{[^:}]+:(\d{2,5})}", safe_text(properties), re.MULTILINE):
+                item = {"port": int(port), "source": relative(properties, root)}
+                if item not in project["ports"]:
+                    project["ports"].append(item)
 
 
 def detect_dependencies(files: list[Path], root: Path) -> list[dict[str, str]]:
@@ -307,6 +339,7 @@ def inspect(root: Path) -> dict[str, Any]:
 
     enrich_python_projects(projects, files, root)
     enrich_node_projects(projects, files, root)
+    enrich_java_projects(projects, files, root)
     if not projects:
         warnings.append("no supported project manifest detected")
 

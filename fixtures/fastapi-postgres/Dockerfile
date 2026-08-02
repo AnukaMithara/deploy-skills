@@ -20,7 +20,7 @@ RUN addgroup --system --gid 10001 app \
 WORKDIR /app
 COPY --from=builder /wheels /wheels
 COPY requirements.txt .
-RUN python -m pip install --no-index --find-links=/wheels -r requirements.txt \
+RUN python -m pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt \
     && rm -rf /wheels
 
 COPY --chown=app:app alembic.ini .

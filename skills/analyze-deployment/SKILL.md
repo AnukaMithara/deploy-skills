@@ -1,6 +1,7 @@
 ---
 name: analyze-deployment
 description: Inspect an application repository and produce a machine-readable stack inventory plus a concise deployment plan. Use before generating or modifying Dockerfiles, Compose files, reverse proxies, CI/CD, server configuration, migrations, backups, or other deployment artifacts, including reviews of existing deployment configuration.
+license: Apache-2.0
 ---
 
 # Analyze Deployment

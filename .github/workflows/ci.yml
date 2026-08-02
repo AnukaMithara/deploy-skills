@@ -33,9 +33,56 @@ jobs:
           REDIS_URL: redis://:fixture-local-only-cache-password@redis:6379/0
         run: python3 -m unittest discover -s tests -v
       - name: Validate evaluation JSON
-        run: python3 -m json.tool evals/prompts.json >/dev/null && python3 -m json.tool evals/expected-invariants.json >/dev/null
+        run: python3 scripts/run-evals.py
+      - name: Validate generated deployment workflow
+        run: python3 skills/configure-ci-cd/scripts/validate_workflow.py --workflow skills/configure-ci-cd/assets/deploy.yml
       - name: Audit Next.js production dependencies
         run: npm audit --omit=dev --prefix fixtures/nextjs
+      - name: Audit Node.js API production dependencies
+        run: npm audit --omit=dev --prefix fixtures/node-api-postgres
+
+  static-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Check shell scripts
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
+        with:
+          scandir: ./scripts
+      - name: Review dependency changes
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+      - name: Scan repository for secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dockerfile-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile:
+          - fixtures/fastapi-postgres/Dockerfile
+          - fixtures/fastapi-postgres-redis/Dockerfile
+          - fixtures/nextjs/Dockerfile
+          - fixtures/node-api-postgres/Dockerfile
+          - fixtures/spring-boot-postgres/Dockerfile
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@2a66e89f53d0771bb131a7fa31f3136336094aa6 # v3.4.0
+        with:
+          dockerfile: ${{ matrix.dockerfile }}
+          failure-threshold: error
 
   integration:
     runs-on: ubuntu-latest
@@ -44,15 +91,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        fixture:
-          - fastapi-postgres
-          - fastapi-postgres-redis
-          - nextjs
+        include:
+          - fixture: fastapi-postgres
+            image: deploy-skills-fastapi
+          - fixture: fastapi-postgres-redis
+            image: deploy-skills-fastapi-redis
+          - fixture: nextjs
+            image: deploy-skills-nextjs
+          - fixture: node-api-postgres
+            image: deploy-skills-node-api
+          - fixture: spring-boot-postgres
+            image: deploy-skills-spring-boot
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Run production fixture
         run: ./scripts/run-fixture.sh fixtures/${{ matrix.fixture }}
+      - name: Scan built application image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ matrix.image }}:fixture-test
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
 
   local-integration:
     runs-on: ubuntu-latest
@@ -64,6 +126,8 @@ jobs:
         fixture:
           - fastapi-postgres-redis
           - nextjs
+          - node-api-postgres
+          - spring-boot-postgres
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -1,6 +1,7 @@
 ---
 name: configure-server-compose
 description: Generate or improve Docker Compose configuration for production deployment on a single Ubuntu or comparable Debian-based server. Use when an application needs versioned images, internal networks, PostgreSQL persistence, health checks, explicit migrations, restart behavior, secrets guidance, backup, and rollback without development bind mounts.
+license: Apache-2.0
 ---
 
 # Configure Server Compose

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Configure CI/CD"
+  short_description: "Create approval-gated GitHub deployment workflows"
+  default_prompt: "Use $configure-ci-cd to create a secure GitHub Actions deployment workflow for this repository."

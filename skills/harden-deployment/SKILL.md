@@ -1,6 +1,7 @@
 ---
 name: harden-deployment
 description: Audit Dockerfiles and Docker Compose deployment configuration for unsafe production defaults. Use before deployment or during security review to detect root containers, privileged mode, host networking, Docker socket mounts, public databases, embedded secrets, mutable application tags, unsafe bind mounts, excess capabilities, and missing health or restart controls.
+license: Apache-2.0
 ---
 
 # Harden Deployment

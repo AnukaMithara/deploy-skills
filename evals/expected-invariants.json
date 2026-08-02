@@ -86,5 +86,58 @@
       "public development port on all interfaces",
       "production TLS configuration"
     ]
+  },
+  "node-api-postgres-production": {
+    "required": [
+      "npm lockfile is used for the build",
+      "production runtime runs as non-root",
+      "PostgreSQL is private and persistent",
+      "migration runs as an explicit one-shot command",
+      "health proves PostgreSQL reachability",
+      "Nginx is the public entry point",
+      "backup and rollback are documented"
+    ],
+    "forbidden": [
+      "node watch mode in production",
+      "public PostgreSQL port",
+      "latest application tag",
+      "automatic production migration"
+    ]
+  },
+  "spring-boot-postgres-production": {
+    "required": [
+      "Java 21 build and runtime are separated",
+      "production runtime runs as non-root",
+      "PostgreSQL is private and persistent",
+      "Flyway is disabled in the long-running application",
+      "Flyway runs as an explicit one-shot command",
+      "health proves PostgreSQL reachability",
+      "backup and rollback are documented"
+    ],
+    "forbidden": [
+      "Spring development process in production",
+      "public PostgreSQL port",
+      "latest application tag",
+      "automatic migration rollback"
+    ]
+  },
+  "github-actions-production": {
+    "required": [
+      "third-party actions are pinned to full commit SHAs",
+      "top-level permissions are read-only",
+      "package write permission is isolated to publishing",
+      "production deploy and rollback use environment approval",
+      "image versions are immutable",
+      "SSH host trust is supplied from reviewed secret data",
+      "public health is verified after deployment and rollback"
+    ],
+    "forbidden": [
+      "pull_request_target execution",
+      "mutable action references",
+      "latest production image",
+      "ssh-keyscan trust on first use",
+      "automatic production rollback",
+      "automatic database downgrade"
+    ]
   }
 }

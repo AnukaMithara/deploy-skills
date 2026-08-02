@@ -16,6 +16,16 @@ case "$fixture_name" in
     export HTTP_PORT="${HTTP_PORT:-18082}"
     health_path="/api/health"
     ;;
+  *node-api*)
+    export APP_IMAGE="deploy-skills-node-api"
+    export HTTP_PORT="${HTTP_PORT:-18083}"
+    health_path="/health"
+    ;;
+  *spring-boot*)
+    export APP_IMAGE="deploy-skills-spring-boot"
+    export HTTP_PORT="${HTTP_PORT:-18084}"
+    health_path="/health"
+    ;;
   *redis*)
     export APP_IMAGE="deploy-skills-fastapi-redis"
     export HTTP_PORT="${HTTP_PORT:-18081}"
@@ -34,6 +44,10 @@ export POSTGRES_PASSWORD="fixture-local-only-password"
 export DATABASE_URL="postgresql+psycopg://fixture:fixture-local-only-password@db:5432/fixture"
 export REDIS_PASSWORD="fixture-local-only-cache-password"
 export REDIS_URL="redis://:fixture-local-only-cache-password@redis:6379/0"
+
+if [[ "$fixture_name" == *spring-boot* ]]; then
+  export DATABASE_URL="jdbc:postgresql://db:5432/fixture"
+fi
 
 compose=(docker compose -f "$fixture/compose.yaml" -f "$fixture/compose.production.yaml")
 completed=0
@@ -86,9 +100,14 @@ fi
 if grep -qx redis <<<"$services"; then
   grep -q '"redis":"reachable"' "$health_file"
 fi
-runtime_uid="$("${compose[@]}" exec -T app id -u)"
-if [[ "$runtime_uid" == "0" ]]; then
-  echo "Application container runs as root." >&2
+app_container_id="$("${compose[@]}" ps -q app)"
+configured_user="$(docker inspect --format '{{.Config.User}}' "$app_container_id")"
+if [[ -z "$configured_user" || "$configured_user" == "0" || "$configured_user" == "root" || "$configured_user" == 0:* ]]; then
+  echo "Application container has no explicit non-root runtime user." >&2
+  exit 1
+fi
+if runtime_uid="$("${compose[@]}" exec -T app id -u 2>/dev/null)" && [[ "$runtime_uid" == "0" ]]; then
+  echo "Application container resolves its configured user to root." >&2
   exit 1
 fi
 if [[ "${#dependencies[@]}" -gt 0 ]]; then

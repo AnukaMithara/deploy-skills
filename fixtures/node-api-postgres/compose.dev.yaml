@@ -1,0 +1,33 @@
+services:
+  app:
+    image: deploy-skills-node-api:development
+    build:
+      context: .
+      target: development
+    command: ["npm", "run", "dev"]
+    environment:
+      DATABASE_URL: postgresql://fixture:fixture-local-only-password@db:5432/fixture
+    ports:
+      - "127.0.0.1:${APP_PORT:-18003}:3000"
+    volumes:
+      - ./app:/app/app:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000/health', response => process.exit(response.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+
+  migrate:
+    image: deploy-skills-node-api:development
+    command: ["node", "app/migrate.js"]
+    environment:
+      DATABASE_URL: postgresql://fixture:fixture-local-only-password@db:5432/fixture
+
+  db:
+    environment:
+      POSTGRES_DB: fixture
+      POSTGRES_USER: fixture
+      POSTGRES_PASSWORD: fixture-local-only-password
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-15434}:5432"
+
+networks:
+  backend:
+    internal: false
