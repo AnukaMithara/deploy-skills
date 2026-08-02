@@ -12,6 +12,8 @@ DETECTOR = ROOT / "skills/analyze-deployment/scripts/detect-project.py"
 FIXTURE = ROOT / "fixtures/fastapi-postgres"
 REDIS_FIXTURE = ROOT / "fixtures/fastapi-postgres-redis"
 NEXTJS_FIXTURE = ROOT / "fixtures/nextjs"
+NODE_FIXTURE = ROOT / "fixtures/node-api-postgres"
+SPRING_FIXTURE = ROOT / "fixtures/spring-boot-postgres"
 
 
 class DetectProjectTests(unittest.TestCase):
@@ -64,6 +66,30 @@ class DetectProjectTests(unittest.TestCase):
         self.assertIn("npm run build", {item["command"] for item in project["commands"]["build"]})
         self.assertIn("npm run start", {item["command"] for item in project["commands"]["start"]})
         self.assertIn("/api/health", {item["path"] for item in project["health_endpoints"]})
+
+    def test_node_api_fixture_detects_commands_database_and_health(self) -> None:
+        process = self.run_detector(NODE_FIXTURE)
+        self.assertEqual(process.returncode, 0, process.stderr)
+        report = json.loads(process.stdout)
+        project = report["projects"][0]
+        self.assertEqual(project["languages"], ["javascript"])
+        self.assertEqual(project["package_managers"], ["npm"])
+        self.assertIn("npm run start", {item["command"] for item in project["commands"]["start"]})
+        self.assertIn("npm run migrate", {item["command"] for item in project["commands"]["migration"]})
+        self.assertIn("/health", {item["path"] for item in project["health_endpoints"]})
+        self.assertIn("postgresql", {item["type"] for item in report["dependencies"]})
+
+    def test_spring_boot_fixture_detects_commands_database_and_health(self) -> None:
+        process = self.run_detector(SPRING_FIXTURE)
+        self.assertEqual(process.returncode, 0, process.stderr)
+        report = json.loads(process.stdout)
+        project = report["projects"][0]
+        self.assertIn("spring-boot", project["frameworks"])
+        self.assertEqual(project["package_managers"], ["maven"])
+        self.assertIn("mvn package", {item["command"] for item in project["commands"]["build"]})
+        self.assertIn("/health", {item["path"] for item in project["health_endpoints"]})
+        self.assertIn(8080, {item["port"] for item in project["ports"]})
+        self.assertIn("postgresql", {item["type"] for item in report["dependencies"]})
 
     def test_missing_root_uses_contract_exit_code(self) -> None:
         process = self.run_detector(ROOT / "does-not-exist")

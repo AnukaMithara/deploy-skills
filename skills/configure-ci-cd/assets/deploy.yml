@@ -1,0 +1,159 @@
+name: Release deployment
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Production operation"
+        required: true
+        type: choice
+        options: [deploy, rollback]
+      image_version:
+        description: "Immutable image version to deploy or restore"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate application and deployment files
+        run: |
+          # Replace with repository-specific tests before enabling this workflow.
+          docker compose -f compose.yaml -f compose.production.yaml config --quiet
+          docker build --tag "local-validation:${GITHUB_SHA}" .
+      - name: Scan application image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: local-validation:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Review dependency changes
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+      - name: Scan repository for secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Log in to GHCR
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1 # v3.3.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish immutable image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4 # v6.9.0
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy'
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.HEALTHCHECK_URL }}
+    steps:
+      - name: Reject mutable version
+        env:
+          IMAGE_VERSION: ${{ inputs.image_version }}
+        run: test -n "$IMAGE_VERSION" && test "$IMAGE_VERSION" != latest
+      - name: Configure reviewed SSH trust
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/ssh/key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/ssh/known_hosts"
+          chmod 600 "$RUNNER_TEMP/ssh/key" "$RUNNER_TEMP/ssh/known_hosts"
+      - name: Deploy approved image
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_DIRECTORY: ${{ vars.DEPLOY_DIRECTORY }}
+          APP_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          APP_VERSION: ${{ inputs.image_version }}
+        run: |
+          ssh -i "$RUNNER_TEMP/ssh/key" -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '$DEPLOY_DIRECTORY' && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml pull app && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml --profile tools run --rm migrate && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml up -d app proxy"
+      - name: Verify public health
+        env:
+          HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
+        run: curl --fail --show-error --silent --retry 12 --retry-delay 5 "$HEALTHCHECK_URL"
+
+  rollback:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'rollback'
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.HEALTHCHECK_URL }}
+    steps:
+      - name: Reject mutable version
+        env:
+          IMAGE_VERSION: ${{ inputs.image_version }}
+        run: test -n "$IMAGE_VERSION" && test "$IMAGE_VERSION" != latest
+      - name: Configure reviewed SSH trust
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/ssh/key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/ssh/known_hosts"
+          chmod 600 "$RUNNER_TEMP/ssh/key" "$RUNNER_TEMP/ssh/known_hosts"
+      - name: Roll back application without reversing migrations
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_DIRECTORY: ${{ vars.DEPLOY_DIRECTORY }}
+          APP_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          APP_VERSION: ${{ inputs.image_version }}
+        run: |
+          ssh -i "$RUNNER_TEMP/ssh/key" -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '$DEPLOY_DIRECTORY' && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml pull app && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml up -d app proxy"
+      - name: Verify public health
+        env:
+          HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
+        run: curl --fail --show-error --silent --retry 12 --retry-delay 5 "$HEALTHCHECK_URL"

@@ -1,6 +1,7 @@
 ---
 name: dockerize-app
 description: Generate or minimally improve production Dockerfiles and .dockerignore files using repository-specific build and startup evidence. Use for FastAPI, general Python, Node.js, Next.js, Spring Boot, or static applications when a user requests containerization, image hardening, Dockerfile repair, or production image optimization.
+license: Apache-2.0
 ---
 
 # Dockerize App
@@ -12,7 +13,7 @@ Create an image that matches the analyzed application instead of a generic templ
 1. Require an `analyze-deployment` result or perform that analysis first.
 2. Inspect every existing Dockerfile, ignore file, lockfile, and startup declaration.
 3. Read [references/dockerfile-rules.md](references/dockerfile-rules.md).
-4. Read the matching stack reference: [references/python-fastapi.md](references/python-fastapi.md) for Python/FastAPI or [references/nextjs.md](references/nextjs.md) for Next.js.
+4. Read only the matching stack reference: [references/python-fastapi.md](references/python-fastapi.md), [references/nodejs-api.md](references/nodejs-api.md), [references/nextjs.md](references/nextjs.md), or [references/spring-boot.md](references/spring-boot.md).
 5. Propose the exact files and behavior to change before editing existing configuration.
 6. Generate a matching `.dockerignore`; use [assets/dockerignore.base](assets/dockerignore.base) only as a baseline and preserve required build inputs.
 7. Run `python3 scripts/inspect-dockerfile.py --dockerfile <path>` and build the image when Docker is available.

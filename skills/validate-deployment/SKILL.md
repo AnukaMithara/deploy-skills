@@ -1,6 +1,7 @@
 ---
 name: validate-deployment
 description: Validate deployment artifacts with deterministic static checks and optional local Docker integration tests. Use after Dockerfile, Compose, Nginx, environment, migration, security, or operational changes to render configuration, build images, start services, verify health and non-root execution, inspect port exposure, and report exactly what passed or remained unverified.
+license: Apache-2.0
 ---
 
 # Validate Deployment

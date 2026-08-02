@@ -1,6 +1,7 @@
 ---
 name: configure-local-compose
 description: Generate or improve Docker Compose configuration for local application development with image builds, source bind mounts, framework hot reload, dependency health checks, development-only credentials, readable logs, named database volumes, and optional loopback-only database or cache ports. Use when a user requests local Docker setup, compose.dev.yaml, containerized onboarding, or hot-reload development services.
+license: Apache-2.0
 ---
 
 # Configure Local Compose

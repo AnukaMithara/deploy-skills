@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "fixtures/fastapi-postgres"
 REDIS_FIXTURE = ROOT / "fixtures/fastapi-postgres-redis"
 NEXTJS_FIXTURE = ROOT / "fixtures/nextjs"
+NODE_FIXTURE = ROOT / "fixtures/node-api-postgres"
+SPRING_FIXTURE = ROOT / "fixtures/spring-boot-postgres"
 INSPECTOR = ROOT / "skills/dockerize-app/scripts/inspect-dockerfile.py"
 AUDITOR = ROOT / "skills/harden-deployment/scripts/audit_deployment.py"
 VALIDATOR = ROOT / "skills/validate-deployment/scripts/validate_compose.py"
@@ -42,7 +44,7 @@ class DeploymentCheckTests(unittest.TestCase):
         )
 
     def test_fixture_dockerfiles_have_no_errors(self) -> None:
-        for fixture in (FIXTURE, REDIS_FIXTURE, NEXTJS_FIXTURE):
+        for fixture in (FIXTURE, REDIS_FIXTURE, NEXTJS_FIXTURE, NODE_FIXTURE, SPRING_FIXTURE):
             with self.subTest(fixture=fixture.name):
                 process = self.run_script(INSPECTOR, "--dockerfile", str(fixture / "Dockerfile"))
                 self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
@@ -50,7 +52,7 @@ class DeploymentCheckTests(unittest.TestCase):
                 self.assertFalse([item for item in report["findings"] if item["severity"] == "error"])
 
     def test_fixture_security_audit_has_no_errors(self) -> None:
-        for fixture in (FIXTURE, REDIS_FIXTURE, NEXTJS_FIXTURE):
+        for fixture in (FIXTURE, REDIS_FIXTURE, NEXTJS_FIXTURE, NODE_FIXTURE, SPRING_FIXTURE):
             with self.subTest(fixture=fixture.name):
                 process = self.run_script(AUDITOR, "--root", str(fixture))
                 self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
@@ -58,14 +60,14 @@ class DeploymentCheckTests(unittest.TestCase):
                 self.assertEqual(report["summary"]["errors"], 0)
 
     def test_fixture_compose_invariants(self) -> None:
-        for fixture in (FIXTURE, REDIS_FIXTURE, NEXTJS_FIXTURE):
+        for fixture in (FIXTURE, REDIS_FIXTURE, NEXTJS_FIXTURE, NODE_FIXTURE, SPRING_FIXTURE):
             with self.subTest(fixture=fixture.name):
                 process = self.run_script(VALIDATOR, "--root", str(fixture))
                 self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
                 self.assertTrue(json.loads(process.stdout)["valid"])
 
     def test_local_fixture_compose_invariants(self) -> None:
-        for fixture in (FIXTURE, REDIS_FIXTURE, NEXTJS_FIXTURE):
+        for fixture in (FIXTURE, REDIS_FIXTURE, NEXTJS_FIXTURE, NODE_FIXTURE, SPRING_FIXTURE):
             with self.subTest(fixture=fixture.name):
                 process = self.run_script(LOCAL_VALIDATOR, "--root", str(fixture))
                 self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
@@ -129,6 +131,13 @@ class LocalComposeRuleTests(unittest.TestCase):
         model = self.valid_model()
         model["services"]["app"]["command"] = ["npm", "run", "dev"]
         self.assertFalse(any("enable reload" in error for error in self.module.validate(model)))
+
+    def test_node_watch_and_spring_boot_run_enable_reload(self) -> None:
+        for command in (["node", "--watch", "app/server.js"], ["mvn", "spring-boot:run"]):
+            with self.subTest(command=command):
+                model = self.valid_model()
+                model["services"]["app"]["command"] = command
+                self.assertFalse(any("enable reload" in error for error in self.module.validate(model)))
 
     def test_public_dependency_port_is_rejected(self) -> None:
         model = self.valid_model()

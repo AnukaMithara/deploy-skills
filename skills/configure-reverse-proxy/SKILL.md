@@ -1,6 +1,7 @@
 ---
 name: configure-reverse-proxy
 description: Configure or audit Nginx as the public reverse proxy for a Docker Compose application on a single server. Use when deployment needs HTTP routing, HTTPS redirection, WebSockets, forwarded headers, upload limits, proxy timeouts, TLS certificate guidance, or safe Nginx configuration validation.
+license: Apache-2.0
 ---
 
 # Configure Reverse Proxy

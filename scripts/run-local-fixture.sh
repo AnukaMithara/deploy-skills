@@ -15,6 +15,16 @@ case "$fixture_name" in
     export APP_PORT="${APP_PORT:-13000}"
     health_path="/api/health"
     ;;
+  *node-api*)
+    export APP_PORT="${APP_PORT:-18003}"
+    export POSTGRES_PORT="${POSTGRES_PORT:-15434}"
+    health_path="/health"
+    ;;
+  *spring-boot*)
+    export APP_PORT="${APP_PORT:-18004}"
+    export POSTGRES_PORT="${POSTGRES_PORT:-15435}"
+    health_path="/health"
+    ;;
   *redis*)
     export APP_PORT="${APP_PORT:-18001}"
     export POSTGRES_PORT="${POSTGRES_PORT:-15433}"
@@ -81,15 +91,19 @@ if grep -qx redis <<<"$services"; then
 fi
 
 app_container_id="$("${compose[@]}" ps -q app)"
-runtime_uid="$("${compose[@]}" exec -T app id -u)"
-if [[ "$runtime_uid" == "0" ]]; then
-  echo "Local application container runs as root." >&2
+configured_user="$(docker inspect --format '{{.Config.User}}' "$app_container_id")"
+if [[ -z "$configured_user" || "$configured_user" == "0" || "$configured_user" == "root" || "$configured_user" == 0:* ]]; then
+  echo "Local application container has no explicit non-root runtime user." >&2
+  exit 1
+fi
+if runtime_uid="$("${compose[@]}" exec -T app id -u 2>/dev/null)" && [[ "$runtime_uid" == "0" ]]; then
+  echo "Local application container resolves its configured user to root." >&2
   exit 1
 fi
 docker inspect --format '{{json .Config.Cmd}}' "$app_container_id" \
-  | python3 -c 'import json, sys; command = " ".join(json.load(sys.stdin) or []).lower(); markers = ("reload", "next dev", "npm run dev", "pnpm run dev", "yarn dev", "bun run dev", "vite"); raise SystemExit(not any(marker in command for marker in markers))'
+  | python3 -c 'import json, sys; command = " ".join(json.load(sys.stdin) or []).lower(); markers = ("reload", "--watch", "next dev", "npm run dev", "pnpm run dev", "yarn dev", "bun run dev", "vite", "spring-boot:run"); raise SystemExit(not any(marker in command for marker in markers))'
 docker inspect --format '{{json .Mounts}}' "$app_container_id" \
-  | python3 -c 'import json, sys; mounts = json.load(sys.stdin); raise SystemExit(not any(item.get("Type") == "bind" and item.get("Destination") == "/app/app" for item in mounts))'
+  | python3 -c 'import json, sys; mounts = json.load(sys.stdin); raise SystemExit(not any(item.get("Type") == "bind" and str(item.get("Destination", "")).startswith("/app/") for item in mounts))'
 if [[ "${#dependencies[@]}" -gt 0 ]]; then
   for dependency in "${dependencies[@]}"; do
     dependency_container_id="$("${compose[@]}" ps -q "$dependency")"

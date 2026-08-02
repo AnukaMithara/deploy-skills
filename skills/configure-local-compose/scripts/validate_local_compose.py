@@ -74,7 +74,7 @@ def command_text(service: dict[str, Any]) -> str:
 
 def enables_development_reload(service: dict[str, Any]) -> bool:
     command = command_text(service).lower()
-    markers = ("reload", "next dev", "npm run dev", "pnpm run dev", "yarn dev", "bun run dev", "vite")
+    markers = ("reload", "--watch", "next dev", "npm run dev", "pnpm run dev", "yarn dev", "bun run dev", "vite", "spring-boot:run")
     return any(marker in command for marker in markers)
 
 

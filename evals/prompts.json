@@ -15,6 +15,17 @@
       "ambiguous": [
         "Make this production-ready.",
         "Help me ship this application."
+      ],
+      "edge": [
+        "Prepare a monorepo with two APIs and one frontend for one server.",
+        "Deploy this application even though its health endpoint is unknown.",
+        "Replace all existing deployment files with your preferred templates."
+      ],
+      "existing_configuration": [
+        "Complete this deployment while preserving the working Compose and proxy decisions."
+      ],
+      "failure_recovery": [
+        "The release failed its public health check; collect evidence and produce a safe recovery plan."
       ]
     },
     "analyze-deployment": {
@@ -31,6 +42,17 @@
       "ambiguous": [
         "What would it take to run this?",
         "Is the repository ready?"
+      ],
+      "edge": [
+        "Analyze a monorepo with conflicting lockfiles.",
+        "Inspect a repository with no recognized framework.",
+        "Find deployment requirements without reading local secret values."
+      ],
+      "existing_configuration": [
+        "Inventory the current Docker, Compose, proxy, and workflow files before proposing changes."
+      ],
+      "failure_recovery": [
+        "The detector cannot identify a startup command; report evidence and unresolved assumptions."
       ]
     },
     "dockerize-app": {
@@ -48,6 +70,17 @@
       "ambiguous": [
         "Containerize this.",
         "The image is too risky for production."
+      ],
+      "edge": [
+        "Dockerize an application with conflicting Node lockfiles.",
+        "Build an image for a repository whose startup command is undocumented.",
+        "Containerize a service that needs a writable runtime cache on a read-only filesystem."
+      ],
+      "existing_configuration": [
+        "Audit this Dockerfile and change only the unsafe production instructions."
+      ],
+      "failure_recovery": [
+        "The image builds but exits immediately; inspect the entry point and runtime user before editing."
       ]
     },
     "configure-local-compose": {
@@ -65,6 +98,17 @@
       "ambiguous": [
         "Help developers run this repository.",
         "Add hot reload to the containers."
+      ],
+      "edge": [
+        "Add hot reload without exposing PostgreSQL beyond loopback.",
+        "Support local development when the production network is internal-only.",
+        "Create local Compose without deleting the developer's existing database volume."
+      ],
+      "existing_configuration": [
+        "Improve compose.dev.yaml while preserving the working production override."
+      ],
+      "failure_recovery": [
+        "The local app reloads but cannot reach PostgreSQL; diagnose the rendered network model."
       ]
     },
     "configure-server-compose": {
@@ -82,6 +126,17 @@
       "ambiguous": [
         "Set up the services on my VPS.",
         "Separate development from production."
+      ],
+      "edge": [
+        "Create production Compose with an explicit one-shot migration.",
+        "Keep a required runtime cache writable while the application root filesystem is read-only.",
+        "Deploy with an external database and no local volume."
+      ],
+      "existing_configuration": [
+        "Fix only the production problems in the current Compose files."
+      ],
+      "failure_recovery": [
+        "The migration failed after the image was pulled; preserve evidence and stop before replacing services."
       ]
     },
     "configure-reverse-proxy": {
@@ -98,6 +153,17 @@
       "ambiguous": [
         "Expose this application safely.",
         "My upstream returns 502."
+      ],
+      "edge": [
+        "Proxy WebSockets and normal HTTP through the same Nginx server.",
+        "Document TLS bootstrap before the domain points to the server.",
+        "Support a large upload without removing all request-size protection."
+      ],
+      "existing_configuration": [
+        "Audit the current Nginx file and preserve its working upstream architecture."
+      ],
+      "failure_recovery": [
+        "Nginx returns 502; gather upstream health, DNS, and logs before changing the proxy."
       ]
     },
     "harden-deployment": {
@@ -114,6 +180,17 @@
       "ambiguous": [
         "Is this deployment safe?",
         "Review these container files."
+      ],
+      "edge": [
+        "Audit a read-only application that needs one writable cache path.",
+        "Check a production Compose file with a Docker socket mount.",
+        "Distinguish a placeholder secret from an embedded real value."
+      ],
+      "existing_configuration": [
+        "Review the existing deployment and report security findings without rewriting files."
+      ],
+      "failure_recovery": [
+        "A hardening change broke startup; identify the minimal capability or writable path actually required."
       ]
     },
     "validate-deployment": {
@@ -130,6 +207,44 @@
       "ambiguous": [
         "Does this deployment work?",
         "Check the generated files."
+      ],
+      "edge": [
+        "Validate Compose when optional security scanners are unavailable.",
+        "Check a healthy container whose public proxy route fails.",
+        "Verify that local cleanup preserves named volumes."
+      ],
+      "existing_configuration": [
+        "Validate the current deployment and report passes, failures, and skipped tools separately."
+      ],
+      "failure_recovery": [
+        "The smoke test timed out; capture service status and logs before cleanup."
+      ]
+    },
+    "configure-ci-cd": {
+      "positive": [
+        "Create GitHub Actions that validate, publish to GHCR, and deploy after approval.",
+        "Add a manual rollback workflow using a previous immutable image version.",
+        "Audit this deployment workflow for excessive permissions and mutable actions."
+      ],
+      "negative": [
+        "Explain how Git branches work.",
+        "Create a Jenkins pipeline.",
+        "Deploy this release from my laptop without CI."
+      ],
+      "ambiguous": [
+        "Automate releases.",
+        "Add a production pipeline."
+      ],
+      "edge": [
+        "Publish an image without granting package write access to pull-request jobs.",
+        "Deploy to a server whose SSH host key must be reviewed in advance.",
+        "Handle a failed health check without automatically reversing a database migration."
+      ],
+      "existing_configuration": [
+        "Improve the existing GitHub Actions workflow while preserving its registry and test commands."
+      ],
+      "failure_recovery": [
+        "The approved deployment failed health verification; preserve diagnostics and offer a separately approved rollback."
       ]
     }
   },
