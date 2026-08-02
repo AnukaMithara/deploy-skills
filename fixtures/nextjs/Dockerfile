@@ -22,18 +22,14 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:24-alpine AS runtime
+FROM gcr.io/distroless/nodejs24-debian13:nonroot AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 \
     PORT=3000
-RUN addgroup --system --gid 10001 app \
-    && adduser --system --uid 10001 --ingroup app --home /home/app app \
-    && mkdir -p .next/cache \
-    && chown -R app:app .next
-COPY --from=builder --chown=app:app /app/.next/standalone ./
-COPY --from=builder --chown=app:app /app/.next/static ./.next/static
-USER app
+COPY --from=builder --chown=nonroot:nonroot /app/.next/standalone ./
+COPY --from=builder --chown=nonroot:nonroot /app/.next/static ./.next/static
+USER nonroot
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["server.js"]
