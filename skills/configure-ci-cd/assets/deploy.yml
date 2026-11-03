@@ -63,7 +63,7 @@ jobs:
 
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: validate
+    needs: [validate, supply-chain]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -71,6 +71,12 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate release identity
+        env:
+          IMAGE_VERSION: ${{ github.ref_name }}
+        run: |
+          [[ "$IMAGE_VERSION" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?|[0-9a-f]{40})$ ]]
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - name: Log in to GHCR
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1 # v3.3.0
         with:
@@ -86,16 +92,21 @@ jobs:
 
   deploy:
     if: github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy'
-    needs: validate
+    needs: [validate, supply-chain]
     runs-on: ubuntu-latest
+    concurrency:
+      group: production-${{ github.repository }}
+      cancel-in-progress: false
     environment:
       name: production
       url: ${{ vars.HEALTHCHECK_URL }}
     steps:
-      - name: Reject mutable version
+      - name: Validate release version
         env:
           IMAGE_VERSION: ${{ inputs.image_version }}
-        run: test -n "$IMAGE_VERSION" && test "$IMAGE_VERSION" != latest
+        run: |
+          [[ "$IMAGE_VERSION" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?|[0-9a-f]{40})$ ]]
+          test "$IMAGE_VERSION" != latest
       - name: Configure reviewed SSH trust
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -113,9 +124,16 @@ jobs:
           APP_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           APP_VERSION: ${{ inputs.image_version }}
         run: |
-          ssh -i "$RUNNER_TEMP/ssh/key" -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" \
+          APP_IMAGE="${APP_IMAGE,,}"
+          # These values enter a remote shell command. Reject shell syntax first.
+          [[ "$DEPLOY_DIRECTORY" =~ ^/[A-Za-z0-9_./-]+$ ]]
+          [[ "$APP_IMAGE" =~ ^ghcr\.io/[a-z0-9_./-]+$ ]]
+          [[ "$APP_VERSION" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?|[0-9a-f]{40})$ ]]
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]]
+          ssh -o StrictHostKeyChecking=yes -o BatchMode=yes -i "$RUNNER_TEMP/ssh/key" -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cd '$DEPLOY_DIRECTORY' && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml pull app && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml --profile tools run --rm migrate && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml up -d app proxy"
+            "cd '$DEPLOY_DIRECTORY' && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml pull app migrate && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml --profile tools run --rm --pull always migrate && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml up -d app proxy"
       - name: Verify public health
         env:
           HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
@@ -123,16 +141,21 @@ jobs:
 
   rollback:
     if: github.event_name == 'workflow_dispatch' && inputs.operation == 'rollback'
-    needs: validate
+    needs: [validate, supply-chain]
     runs-on: ubuntu-latest
+    concurrency:
+      group: production-${{ github.repository }}
+      cancel-in-progress: false
     environment:
       name: production
       url: ${{ vars.HEALTHCHECK_URL }}
     steps:
-      - name: Reject mutable version
+      - name: Validate release version
         env:
           IMAGE_VERSION: ${{ inputs.image_version }}
-        run: test -n "$IMAGE_VERSION" && test "$IMAGE_VERSION" != latest
+        run: |
+          [[ "$IMAGE_VERSION" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?|[0-9a-f]{40})$ ]]
+          test "$IMAGE_VERSION" != latest
       - name: Configure reviewed SSH trust
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -150,7 +173,14 @@ jobs:
           APP_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           APP_VERSION: ${{ inputs.image_version }}
         run: |
-          ssh -i "$RUNNER_TEMP/ssh/key" -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" \
+          APP_IMAGE="${APP_IMAGE,,}"
+          # These values enter a remote shell command. Reject shell syntax first.
+          [[ "$DEPLOY_DIRECTORY" =~ ^/[A-Za-z0-9_./-]+$ ]]
+          [[ "$APP_IMAGE" =~ ^ghcr\.io/[a-z0-9_./-]+$ ]]
+          [[ "$APP_VERSION" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?|[0-9a-f]{40})$ ]]
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]
+          [[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]]
+          ssh -o StrictHostKeyChecking=yes -o BatchMode=yes -i "$RUNNER_TEMP/ssh/key" -o UserKnownHostsFile="$RUNNER_TEMP/ssh/known_hosts" \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '$DEPLOY_DIRECTORY' && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml pull app && APP_IMAGE='$APP_IMAGE' APP_VERSION='$APP_VERSION' docker compose -f compose.yaml -f compose.production.yaml up -d app proxy"
       - name: Verify public health

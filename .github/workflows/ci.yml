@@ -21,6 +21,8 @@ jobs:
           python-version: "3.12"
       - name: Validate skills
         run: ./scripts/validate-all-skills.sh
+      - name: Require Docker Compose for fixture checks
+        run: docker compose version
       - name: Run unit tests
         env:
           APP_IMAGE: deploy-skills-fastapi

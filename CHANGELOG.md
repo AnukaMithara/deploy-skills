@@ -4,6 +4,15 @@ All notable changes to this project will be documented here. The project follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Gate image publication and production operations on validation and supply-chain checks.
+- Reject shell syntax in remote deployment inputs, enforce reviewed SSH trust, and normalize GHCR image names.
+- Refresh migration images before execution and serialize production deploy/rollback operations.
+- Exercise deployment shell commands using a local SSH stub and regression-test missing safety gates.
+- Report Docker-dependent unit checks as skipped when Docker is absent, while keeping CLI validators fail-closed.
+- Clarify that evaluation JSON checks measure coverage/contracts rather than agent behavior.
+
 ### Added
 
 - Initial FastAPI and PostgreSQL production deployment vertical slice.

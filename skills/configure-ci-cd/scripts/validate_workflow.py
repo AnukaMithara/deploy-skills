@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Validate security and release invariants in a generated GitHub Actions workflow."""
+"""Lint security invariants in workflows derived from the bundled template.
+
+This dependency-free template linter is not a YAML parser or a proof of workflow
+behavior. Run actionlint and the shell regression tests as complementary checks.
+"""
 
 from __future__ import annotations
 
@@ -21,7 +25,7 @@ def finding(rule: str, message: str) -> dict[str, str]:
     return {"rule": rule, "severity": "error", "message": message}
 
 
-def validate(text: str) -> list[dict[str, str]]:
+def validate(text: str, *, require_migrations: bool = True) -> list[dict[str, str]]:
     findings: list[dict[str, str]] = []
     lowered = text.lower()
     if re.search(r"^\s*pull_request_target\s*:", text, re.MULTILINE):
@@ -53,10 +57,36 @@ def validate(text: str) -> list[dict[str, str]]:
         findings.append(finding("workflow.immutable-version", "Production operations must use an explicit immutable image input and avoid latest"))
     if "curl --fail" not in lowered:
         findings.append(finding("workflow.healthcheck", "Workflow has no failing post-deployment HTTP health check"))
-    if "--profile tools run --rm migrate" not in lowered:
+    if require_migrations and "--profile tools run --rm --pull always migrate" not in lowered:
         findings.append(finding("workflow.migration", "Deployment does not run the explicit one-shot migration profile"))
     if "ssh-keyscan" in lowered:
         findings.append(finding("workflow.ssh-trust", "Workflow must use reviewed known-host data instead of trusting ssh-keyscan output"))
+    # Inspect the template's job blocks separately: checks elsewhere in the file
+    # do not protect a production job unless it depends on them.
+    jobs = dict(re.findall(r"^  ([A-Za-z0-9_-]+):\n(.*?)(?=^  [A-Za-z0-9_-]+:|\Z)", text.split("\njobs:\n", 1)[-1], re.MULTILINE | re.DOTALL))
+    for name in ("publish", "deploy", "rollback"):
+        block = jobs.get(name, "")
+        needs = re.search(r"^    needs: \[([^\]]+)\]\s*$", block, re.MULTILINE)
+        if not needs or not {"validate", "supply-chain"}.issubset({item.strip() for item in needs.group(1).split(",")}):
+            findings.append(finding("workflow.security-gates", f"{name} must depend on validate and supply-chain"))
+        if name == "publish":
+            continue
+        required = (
+            '[[ "$IMAGE_VERSION" =~ ^(v[0-9]+\\.[0-9]+\\.[0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?|[0-9a-f]{40})$ ]]',
+            '[[ "$DEPLOY_DIRECTORY" =~ ^/[A-Za-z0-9_./-]+$ ]]',
+            '[[ "$APP_IMAGE" =~ ^ghcr\\.io/[a-z0-9_./-]+$ ]]',
+            '[[ "$APP_VERSION" =~ ^(v[0-9]+\\.[0-9]+\\.[0-9]+(-[A-Za-z0-9][A-Za-z0-9.-]*)?|[0-9a-f]{40})$ ]]',
+            '[[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]]',
+            '[[ "$DEPLOY_HOST" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]]',
+        )
+        if any(check not in block for check in required):
+            findings.append(finding("workflow.remote-inputs", f"{name} must validate release and remote command inputs"))
+        if "StrictHostKeyChecking=yes" not in block or "BatchMode=yes" not in block:
+            findings.append(finding("workflow.ssh-options", f"{name} must explicitly enforce SSH trust and noninteractive authentication"))
+        if "group: production-${{ github.repository }}" not in block or "cancel-in-progress: false" not in block:
+            findings.append(finding("workflow.production-concurrency", f"{name} must serialize production operations without cancellation"))
+    if require_migrations and "pull app migrate" not in jobs.get("deploy", ""):
+        findings.append(finding("workflow.migration-image", "Deployment must refresh the migration image with the application image"))
     if SECRET_ASSIGNMENT.search(text):
         findings.append(finding("workflow.embedded-secret", "Secret-like value appears inline instead of using a GitHub secret"))
     return findings
@@ -65,10 +95,11 @@ def validate(text: str) -> list[dict[str, str]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workflow", required=True, type=Path)
+    parser.add_argument("--no-migrations", action="store_true", help="Validate an explicitly stateless workflow without migration commands")
     args = parser.parse_args()
     if not args.workflow.is_file():
         parser.error(f"workflow not found: {args.workflow}")
-    findings = validate(args.workflow.read_text(encoding="utf-8", errors="replace"))
+    findings = validate(args.workflow.read_text(encoding="utf-8", errors="replace"), require_migrations=not args.no_migrations)
     print(json.dumps({"workflow": str(args.workflow), "valid": not findings, "findings": findings}, indent=2))
     return 1 if findings else 0
 

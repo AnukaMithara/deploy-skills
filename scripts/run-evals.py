@@ -82,7 +82,7 @@ def main() -> int:
         errors = evaluate(root)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         errors = [str(exc)]
-    print(json.dumps({"valid": not errors, "errors": errors}, indent=2))
+    print(json.dumps({"check_type": "coverage-and-contracts", "agent_behavior_evaluated": False, "valid": not errors, "errors": errors}, indent=2))
     return 1 if errors else 0
 
 

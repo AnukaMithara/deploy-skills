@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import importlib.util
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -51,6 +52,7 @@ class DeploymentCheckTests(unittest.TestCase):
                 report = json.loads(process.stdout)
                 self.assertFalse([item for item in report["findings"] if item["severity"] == "error"])
 
+    @unittest.skipUnless(shutil.which("docker"), "Docker CLI required for rendered Compose checks")
     def test_fixture_security_audit_has_no_errors(self) -> None:
         for fixture in (FIXTURE, REDIS_FIXTURE, NEXTJS_FIXTURE, NODE_FIXTURE, SPRING_FIXTURE):
             with self.subTest(fixture=fixture.name):
@@ -59,6 +61,7 @@ class DeploymentCheckTests(unittest.TestCase):
                 report = json.loads(process.stdout)
                 self.assertEqual(report["summary"]["errors"], 0)
 
+    @unittest.skipUnless(shutil.which("docker"), "Docker CLI required for rendered Compose checks")
     def test_fixture_compose_invariants(self) -> None:
         for fixture in (FIXTURE, REDIS_FIXTURE, NEXTJS_FIXTURE, NODE_FIXTURE, SPRING_FIXTURE):
             with self.subTest(fixture=fixture.name):
@@ -66,6 +69,7 @@ class DeploymentCheckTests(unittest.TestCase):
                 self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
                 self.assertTrue(json.loads(process.stdout)["valid"])
 
+    @unittest.skipUnless(shutil.which("docker"), "Docker CLI required for rendered Compose checks")
     def test_local_fixture_compose_invariants(self) -> None:
         for fixture in (FIXTURE, REDIS_FIXTURE, NEXTJS_FIXTURE, NODE_FIXTURE, SPRING_FIXTURE):
             with self.subTest(fixture=fixture.name):
@@ -73,6 +77,7 @@ class DeploymentCheckTests(unittest.TestCase):
                 self.assertEqual(process.returncode, 0, process.stdout + process.stderr)
                 self.assertTrue(json.loads(process.stdout)["valid"])
 
+    @unittest.skipUnless(shutil.which("docker"), "Docker CLI required for rendered Compose checks")
     def test_inline_compose_secret_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

@@ -1,6 +1,6 @@
 # Deploy Skills
 
-Production-ready deployment playbooks for AI coding agents.
+Deployment playbooks for AI coding agents, with executable fixtures and safety checks.
 
 Deploy Skills helps Codex, Claude Code, GitHub Copilot, Cursor, and other Agent Skills-compatible agents inspect an application before creating secure, validated deployment configuration. The current vertical slices cover local Docker development and single-server production for FastAPI, Node.js APIs, and Spring Boot with PostgreSQL, optional Redis caching for FastAPI, and Next.js standalone deployment.
 
@@ -75,6 +75,8 @@ docker compose -f fixtures/fastapi-postgres/compose.yaml \
   -f fixtures/fastapi-postgres/compose.production.yaml config --quiet
 ```
 
+The unit runner explicitly skips rendered-Compose checks when the Docker CLI is absent. These skips are not release evidence; CI requires Docker Compose before running the suite. The standalone deployment validators continue to return failure when Docker is unavailable.
+
 Live fixture validation:
 
 ```bash
@@ -90,6 +92,8 @@ Live fixture validation:
 ```
 
 The live test builds images and starts local containers. It does not connect to a remote server or delete named volumes.
+
+The evaluation runner checks prompt coverage and invariant-contract completeness. It does not execute AI agents. Passing static checks alone does not establish release readiness; complete `RELEASE_CHECKLIST.md` with live fixture and agent-trial evidence.
 
 ## Current scope
 

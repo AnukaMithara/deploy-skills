@@ -7,7 +7,7 @@ Complete this checklist from a clean clone. Publishing, repository-setting chang
 - Run `./scripts/validate-all-skills.sh` and confirm both repository validation and `gh skill publish --dry-run` pass.
 - Install one skill into Codex from its GitHub directory and execute a positive trigger evaluation.
 - Load the same unmodified skill in Claude Code and execute the equivalent evaluation.
-- Run `python3 scripts/run-evals.py` and record the result.
+- Run `python3 scripts/run-evals.py` and record the result as coverage/contract validation only. Keep positive, negative, and safety trial outputs separately; do not count the JSON runner as agent behavior evidence.
 
 ## Fixtures and security
 
@@ -21,7 +21,9 @@ Complete this checklist from a clean clone. Publishing, repository-setting chang
 - Require pull requests, maintainer review for executable changes, and the repository CI checks on `main`.
 - Enable secret scanning, push protection, dependency review, and security advisories where the hosting plan supports them.
 - Protect tags matching `v*` against deletion and modification before publishing the first release.
-- Configure the `production` environment with required reviewers before enabling any generated deployment workflow.
+- Configure the `production` environment with required reviewers and permitted deployment refs before enabling any generated deployment workflow.
+- Prevent release image tag replacement, record resolved image digests, and confirm application and migration services resolve to the approved release.
+- Exercise deploy and rollback input rejection, supply-chain failure blocking, and shared production concurrency in a disposable environment.
 
 ## Release
 
