@@ -1,0 +1,21 @@
+{
+  "name": "deploy-skills",
+  "displayName": "Deploy Skills",
+  "version": "0.1.0-rc.1",
+  "description": "Repository-aware Docker and single-server deployment playbooks with security checks, validation, and approval-gated operations.",
+  "author": {
+    "name": "Anuka Mithara",
+    "url": "https://github.com/AnukaMithara"
+  },
+  "homepage": "https://github.com/AnukaMithara/deploy-skills#readme",
+  "repository": "https://github.com/AnukaMithara/deploy-skills",
+  "license": "Apache-2.0",
+  "keywords": [
+    "deployment",
+    "docker",
+    "compose",
+    "devops",
+    "security",
+    "ci-cd"
+  ]
+}

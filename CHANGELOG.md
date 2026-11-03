@@ -15,6 +15,8 @@ All notable changes to this project will be documented here. The project follows
 
 ### Added
 
+- Claude plugin manifest, root marketplace entry, local packaging preflight, and directory submission preparation for version 0.1.0-rc.1.
+
 - Initial FastAPI and PostgreSQL production deployment vertical slice.
 - Local Compose skill with bind-mounted FastAPI hot reload.
 - Independent FastAPI, PostgreSQL, and ephemeral Redis fixture.

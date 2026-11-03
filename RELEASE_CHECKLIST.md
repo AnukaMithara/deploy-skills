@@ -2,6 +2,12 @@
 
 Complete this checklist from a clean clone. Publishing, repository-setting changes, registry writes, and production operations require explicit maintainer approval.
 
+## Claude plugin
+
+- Complete the local install, nine-skill discovery, and behavior checks in `CLAUDE_PLUGIN.md`.
+- Run `claude plugin validate . --strict` and record the result.
+- After publication is authorized, validate the exact published commit in the directory portal and resolve blocking findings before submission.
+
 ## Portable skills
 
 - Run `./scripts/validate-all-skills.sh` and confirm both repository validation and `gh skill publish --dry-run` pass.

@@ -5,6 +5,10 @@ repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 validator="$repository_root/scripts/validate_skill.py"
 status=0
 
+if ! python3 "$repository_root/scripts/validate_claude_plugin.py"; then
+  status=1
+fi
+
 while IFS= read -r skill_file; do
   skill_directory="$(dirname "$skill_file")"
   if ! python3 "$validator" "$skill_directory"; then

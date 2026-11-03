@@ -36,13 +36,37 @@ Inspect -> Plan -> Generate -> Harden -> Validate -> Document
 
 ## Install
 
-Install the repository with a compatible skill installer:
+### Claude Code plugin
+
+This repository is one plugin containing all nine skills. Test the local checkout before publishing:
 
 ```bash
-npx skills add AnukaMithara/deploy-skills
+claude --plugin-dir /absolute/path/to/deploy-skills
 ```
 
-Or install a single skill directory with your agent's skill installer. Always review executable scripts before installing a public skill.
+Inside Claude Code, run `/deploy-skills:analyze-deployment` to inspect your application or `/deploy-skills:deploy-app` for the full workflow. The application repository is your working directory; the plugin directory holds the instructions and helper scripts.
+
+To test marketplace installation from a local checkout:
+
+```bash
+claude plugin validate /absolute/path/to/deploy-skills --strict
+claude plugin marketplace add /absolute/path/to/deploy-skills
+claude plugin install deploy-skills@anukamithara-deploy-skills
+```
+
+After the plugin files have been published to GitHub, users can replace the local marketplace path with `AnukaMithara/deploy-skills`. The current local release candidate is not published or directory-approved. See [CLAUDE_PLUGIN.md](CLAUDE_PLUGIN.md) for submission preparation and remaining checks.
+
+### Other compatible agents
+
+Use your agent's skill installer with this repository or a single directory under `skills/`. The portable `SKILL.md` files and Codex metadata remain available. Review executable scripts before installing a public skill.
+
+## Requirements and data handling
+
+The plugin bundles instructions, text templates, and readable Python/Bash helpers. It has no startup hooks, background processes, MCP servers, telemetry, or automatic package installation. Loading it adds skills; running a skill can inspect application source, dependency manifests, deployment configuration, and environment variable names, then write deployment files and reports in the application checkout. Avoid providing production secrets or personal data in prompts or test fixtures. Your Claude account's data handling applies to content the agent reads.
+
+Static helpers require Python 3.10 or later; shell helpers require Bash. Compose rendering and live fixture tests require Docker with Compose v2. Node.js/npm and a JDK/Maven are stack-specific tools, generally used inside the fixture build containers. Generated GitHub Actions require a GitHub repository; GHCR publishing and Ubuntu server operations require separately configured credentials, host trust, and approval.
+
+When explicitly run, builds and scanners can fetch dependencies, images, actions, and vulnerability databases from package registries, container registries, GitHub, and scanner providers. Fixture tests start local containers, bind local ports, and create Docker images and named data volumes; they stop the fixture containers without deleting named volumes. Generated release workflows can publish images to GHCR, connect by SSH to the server you configure, run migrations, and call your health-check URL. Review generated files before enabling them. Production connections and mutations require explicit approval. The plugin supplies no hosted service or separate data store; files, logs, images, and volumes remain in the tools and accounts where you run them.
 
 ## Example
 
@@ -57,6 +81,7 @@ The agent must analyze existing configuration and show a short deployment plan b
 Fast checks:
 
 ```bash
+python3 scripts/validate_claude_plugin.py
 ./scripts/validate-all-skills.sh
 gh skill publish --dry-run
 python3 -m unittest discover -s tests -v

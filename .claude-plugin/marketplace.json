@@ -1,0 +1,14 @@
+{
+  "name": "anukamithara-deploy-skills",
+  "owner": {
+    "name": "Anuka Mithara",
+    "url": "https://github.com/AnukaMithara"
+  },
+  "plugins": [
+    {
+      "name": "deploy-skills",
+      "source": "./",
+      "description": "Repository-aware Docker and single-server deployment playbooks with security checks, validation, and approval-gated operations."
+    }
+  ]
+}
